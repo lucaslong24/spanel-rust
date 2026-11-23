@@ -236,7 +236,7 @@ ensure_iptables_accept_before_reject() {
     reject_line="$(iptables -S INPUT 2>/dev/null | tail -n +2 | grep -nE '^-A INPUT (.* )?-j (REJECT|DROP)' | head -n1 | cut -d: -f1 || true)"
     [[ -z "${reject_line}" ]] && return 0
 
-    if iptables -S INPUT 2>/dev/null | tail -n +2 | head -n "$((reject_line - 1))" | grep -qE -- "-p ${proto} .*--dport ${port}([[:space:]]|$).* -j ACCEPT"; then
+    if iptables -S INPUT 2>/dev/null | tail -n +2 | head -n "$((reject_line - 1))" | grep -E -- "-p ${proto}([[:space:]]|$)" | grep -E -- "--dport ${port}([[:space:]]|$)" | grep -qE -- "-j ACCEPT([[:space:]]|$)"; then
         return 0
     fi
     iptables -I INPUT "${reject_line}" -p "${proto}" -m state --state NEW -m "${proto}" --dport "${port}" -j ACCEPT 2>/dev/null \
