@@ -19,6 +19,9 @@ WWW_ROOT="/www"
 WWW_WWWROOT="/www/wwwroot"
 WWW_BACKUP="/www/backup"
 WWW_RECYCLE="/www/.Recycle_bin"
+NGINX_AVAIL="${SPANEL_NGINX_AVAIL:-/etc/nginx/sites-available}"
+NGINX_ENABLED="${SPANEL_NGINX_ENABLED:-/etc/nginx/sites-enabled}"
+NGINX_LOGS="${SPANEL_NGINX_LOGS:-/var/log/nginx}"
 SERVICE_PATH="/etc/systemd/system/spanel.service"
 PURGE_DATA="false"
 PURGE_SITES="false"
@@ -49,6 +52,52 @@ is_dir_empty() {
     [[ -d "${d}" ]] && [[ -z "$(ls -A "${d}" 2>/dev/null || true)" ]]
 }
 
+purge_spanel_nginx_artifacts() {
+    local removed=0
+    local site_names=()
+    local conf fname site target ht
+
+    shopt -s nullglob
+    for conf in "${NGINX_AVAIL}"/*.conf "${NGINX_ENABLED}"/*.conf; do
+        [[ -f "${conf}" ]] || continue
+        if grep -qE '^# (Managed|Generated) by SPanel' "${conf}" 2>/dev/null; then
+            fname="$(basename "${conf}")"
+            site="${fname%.conf}"
+            site_names+=("${site}")
+            rm -f "${NGINX_ENABLED}/${fname}" "${NGINX_AVAIL}/${fname}"
+            removed=$((removed + 1))
+        fi
+    done
+
+    for ht in "${NGINX_AVAIL}"/*.htpasswd; do
+        [[ -f "${ht}" ]] || continue
+        fname="$(basename "${ht}")"
+        site="${fname%.htpasswd}"
+        if [[ ! -f "${NGINX_AVAIL}/${site}.conf" ]] && ! grep -RqsF "${fname}" "${NGINX_AVAIL}" "${NGINX_ENABLED}" /etc/nginx/conf.d 2>/dev/null; then
+            site_names+=("${site}")
+            rm -f "${ht}"
+            removed=$((removed + 1))
+        fi
+    done
+
+    for site in "${site_names[@]}"; do
+        rm -f "${NGINX_AVAIL}/${site}.htpasswd" "${NGINX_LOGS}/${site}.access.log" "${NGINX_LOGS}/${site}.error.log"
+    done
+
+    for target in "${NGINX_ENABLED}"/*; do
+        if [[ -L "${target}" && ! -e "${target}" ]]; then
+            rm -f "${target}"
+            removed=$((removed + 1))
+        fi
+    done
+    shopt -u nullglob
+
+    if [[ "${removed}" -gt 0 ]]; then
+        echo -e "${BOLD_YELLOW}[PURGED]${RESET} Đã dọn ${removed} cấu hình Nginx (vhost/log) do SPanel quản lý"
+        systemctl reload nginx 2>/dev/null || true
+    fi
+}
+
 echo -e "${BOLD_CYAN}[SPanel]${RESET} Đang dừng và gỡ bỏ dịch vụ spanel.service..."
 if systemctl list-unit-files 2>/dev/null | grep -q "^spanel\.service"; then
     systemctl stop spanel.service 2>/dev/null || true
@@ -72,6 +121,7 @@ if [[ -f "${INSTALL_BIN}" ]]; then
 fi
 
 if [[ "${PURGE_DATA}" == "true" ]]; then
+    purge_spanel_nginx_artifacts
     if [[ -d "${DATA_DIR}" ]]; then
         rm -rf "${DATA_DIR}"
         echo -e "${BOLD_YELLOW}[PURGED]${RESET} Đã xóa thư mục dữ liệu ${DATA_DIR}"
