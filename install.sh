@@ -233,10 +233,10 @@ ensure_iptables_accept_before_reject() {
     local port="$1"
     local proto="${2:-tcp}"
     local reject_line
-    reject_line="$(iptables -S INPUT 2>/dev/null | tail -n +2 | grep -nE '^-A INPUT .* -j (REJECT|DROP)' | head -n1 | cut -d: -f1 || true)"
+    reject_line="$(iptables -S INPUT 2>/dev/null | tail -n +2 | grep -nE '^-A INPUT (.* )?-j (REJECT|DROP)' | head -n1 | cut -d: -f1 || true)"
     [[ -z "${reject_line}" ]] && return 0
 
-    if iptables -S INPUT 2>/dev/null | tail -n +2 | head -n "$((reject_line - 1))" | grep -qE -- "--dport ${port}([[:space:]]|$).* -j ACCEPT"; then
+    if iptables -S INPUT 2>/dev/null | tail -n +2 | head -n "$((reject_line - 1))" | grep -qE -- "-p ${proto} .*--dport ${port}([[:space:]]|$).* -j ACCEPT"; then
         return 0
     fi
     iptables -I INPUT "${reject_line}" -p "${proto}" -m state --state NEW -m "${proto}" --dport "${port}" -j ACCEPT 2>/dev/null \
@@ -245,7 +245,7 @@ ensure_iptables_accept_before_reject() {
 }
 
 if command -v iptables >/dev/null 2>&1; then
-    if iptables -S INPUT 2>/dev/null | grep -qE '^-A INPUT .* -j (REJECT|DROP)'; then
+    if iptables -S INPUT 2>/dev/null | grep -qE '^-A INPUT (.* )?-j (REJECT|DROP)'; then
         log_warn "Phát hiện rule iptables INPUT chặn cứng (ví dụ Oracle Cloud). Đang chèn quy tắc mở cổng an toàn trước dòng REJECT..."
         for p in "${SSH_PORT}" "${PANEL_PORT}" 80 443; do
             ensure_iptables_accept_before_reject "${p}" "tcp"
