@@ -85,7 +85,7 @@ Bạn có thể gỡ cài đặt trực tiếp bằng lệnh tích hợp sẵn (
 sudo sp uninstall
 ```
 
-Hoặc chạy qua kịch bản gỡ cài đặt từ xa (mặc định giữ an toàn dữ liệu trong `/var/lib/spanel`, thêm `--purge` nếu muốn xóa toàn bộ dữ liệu):
+Hoặc chạy qua kịch bản gỡ cài đặt từ xa (mặc định giữ an toàn dữ liệu trong `/var/lib/spanel` và `/www/wwwroot`; thêm `--purge` để dọn dữ liệu SPanel — sẽ giữ nguyên `/www/wwwroot` nếu có mã nguồn trừ khi xác nhận lần 2 hoặc thêm `--purge-sites`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lucaslong24/spanel-rust/release/uninstall.sh | sudo bash
@@ -96,6 +96,6 @@ curl -fsSL https://raw.githubusercontent.com/lucaslong24/spanel-rust/release/uni
 ## 🔐 Mã Băm Kiểm Tra Toàn Vẹn (`SHA256SUMS` — `v1.0.0`)
 
 ```text
-083640e215653724118a35accc36322f90754cbb95efa1f8057f13c3700b857f  spanel-linux-x86_64
-bd62b1e9f83c3ab3c5399aa17829deeed2fc2e7b511e131bca2231c983dfa54f  spanel-linux-aarch64
+23b83b6d51b082bc645b9046b5b59029e410840a44845534f821ee9aef32f217  spanel-linux-x86_64
+0e256a40dfc706bbefd169e759bde2738d359c2a0088a0cc6bc2ec547a8db1c8  spanel-linux-aarch64
 ```

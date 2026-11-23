@@ -213,16 +213,47 @@ if ! systemctl is-active --quiet spanel.service; then
 fi
 log_ok "Dịch vụ spanel.service đã khởi chạy thành công (active/running)."
 
-# Mở cổng an toàn trên UFW nếu UFW đang bật
+PANEL_PORT="$(SPANEL_DATA_DIR="${DATA_DIR}" "${INSTALL_BIN}" status 2>/dev/null | awk -F'Cổng|Port' 'NF>1{print $2; exit}' | grep -oE '[0-9]+' | head -n1 || echo "8888")"
+SSH_PORT="$(awk '/^[[:space:]]*Port[[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null || echo "22")"
+[[ -z "${PANEL_PORT}" ]] && PANEL_PORT="8888"
+[[ -z "${SSH_PORT}" ]] && SSH_PORT="22"
+
+# Mở cổng an toàn trên UFW và đồng bộ systemd ufw.service
 if command -v ufw >/dev/null 2>&1; then
     if ufw status 2>/dev/null | grep -q "Status: active"; then
-        PANEL_PORT="$(SPANEL_DATA_DIR="${DATA_DIR}" "${INSTALL_BIN}" status 2>/dev/null | awk -F': ' '/^Cổng/{print $2}' | tr -d '[:space:]' || echo "8888")"
-        SSH_PORT="$(awk '/^[[:space:]]*Port[[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null || echo "22")"
-        [[ -z "${PANEL_PORT}" ]] && PANEL_PORT="8888"
-        [[ -z "${SSH_PORT}" ]] && SSH_PORT="22"
         ufw allow "${SSH_PORT}/tcp" >/dev/null 2>&1 || true
         ufw allow "${PANEL_PORT}/tcp" >/dev/null 2>&1 || true
-        log_ok "Đã đảm bảo cổng SSH (${SSH_PORT}/tcp) và cổng SPanel (${PANEL_PORT}/tcp) được mở trên UFW."
+        systemctl enable --now ufw >/dev/null 2>&1 || true
+        log_ok "Đã đảm bảo cổng SSH (${SSH_PORT}/tcp), cổng SPanel (${PANEL_PORT}/tcp) trên UFW và đồng bộ systemd ufw.service."
+    fi
+fi
+
+# Xử lý rule iptables chặn cứng (như Oracle Cloud iptables-persistent: -j REJECT --reject-with icmp-host-prohibited)
+ensure_iptables_accept_before_reject() {
+    local port="$1"
+    local proto="${2:-tcp}"
+    local reject_line
+    reject_line="$(iptables -S INPUT 2>/dev/null | tail -n +2 | grep -nE '^-A INPUT .* -j (REJECT|DROP)' | head -n1 | cut -d: -f1 || true)"
+    [[ -z "${reject_line}" ]] && return 0
+
+    if iptables -S INPUT 2>/dev/null | tail -n +2 | head -n "$((reject_line - 1))" | grep -qE -- "--dport ${port}([[:space:]]|$).* -j ACCEPT"; then
+        return 0
+    fi
+    iptables -I INPUT "${reject_line}" -p "${proto}" -m state --state NEW -m "${proto}" --dport "${port}" -j ACCEPT 2>/dev/null \
+        || iptables -I INPUT "${reject_line}" -p "${proto}" --dport "${port}" -j ACCEPT 2>/dev/null \
+        || true
+}
+
+if command -v iptables >/dev/null 2>&1; then
+    if iptables -S INPUT 2>/dev/null | grep -qE '^-A INPUT .* -j (REJECT|DROP)'; then
+        log_warn "Phát hiện rule iptables INPUT chặn cứng (ví dụ Oracle Cloud). Đang chèn quy tắc mở cổng an toàn trước dòng REJECT..."
+        for p in "${SSH_PORT}" "${PANEL_PORT}" 80 443; do
+            ensure_iptables_accept_before_reject "${p}" "tcp"
+        done
+        if command -v netfilter-persistent >/dev/null 2>&1; then
+            netfilter-persistent save >/dev/null 2>&1 || true
+        fi
+        log_ok "Đã thông cổng SSH (${SSH_PORT}), SPanel (${PANEL_PORT}), 80, 443 trên iptables INPUT."
     fi
 fi
 
