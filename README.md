@@ -96,6 +96,6 @@ curl -fsSL https://raw.githubusercontent.com/lucaslong24/spanel-rust/release/uni
 ## 🔐 Mã Băm Kiểm Tra Toàn Vẹn (`SHA256SUMS` — `v1.0.0`)
 
 ```text
-23b83b6d51b082bc645b9046b5b59029e410840a44845534f821ee9aef32f217  spanel-linux-x86_64
-0e256a40dfc706bbefd169e759bde2738d359c2a0088a0cc6bc2ec547a8db1c8  spanel-linux-aarch64
+8616a532cd23e6a2801a97aa666eb102be491be91a50be461c4f9d5fa43ed4c1  spanel-linux-x86_64
+ac09edc59b6b76eca76e416c57fa82a565a21cb1310c5de4e269f14249a13fa4  spanel-linux-aarch64
 ```
