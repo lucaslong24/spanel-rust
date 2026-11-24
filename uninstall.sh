@@ -90,6 +90,18 @@ purge_spanel_nginx_artifacts() {
             removed=$((removed + 1))
         fi
     done
+
+    for conf in /etc/nginx/conf.d/spanel-waf-*.conf /etc/nginx/snippets/spanel-waf-*.conf; do
+        [[ -f "${conf}" ]] || continue
+        if grep -qE '^# (Managed|Generated) by SPanel' "${conf}" 2>/dev/null; then
+            rm -f "${conf}"
+            removed=$((removed + 1))
+        fi
+    done
+    if [[ -f "${NGINX_LOGS}/spanel-waf.log" ]]; then
+        rm -f "${NGINX_LOGS}/spanel-waf.log"
+        removed=$((removed + 1))
+    fi
     shopt -u nullglob
 
     if [[ "${removed}" -gt 0 ]]; then
@@ -123,6 +135,7 @@ fi
 if [[ "${PURGE_DATA}" == "true" ]]; then
     purge_spanel_nginx_artifacts
     if [[ -d "${DATA_DIR}" ]]; then
+        chmod -R u+rwX "${DATA_DIR}/quarantine" 2>/dev/null || true
         rm -rf "${DATA_DIR}"
         echo -e "${BOLD_YELLOW}[PURGED]${RESET} Đã xóa thư mục dữ liệu ${DATA_DIR}"
     fi

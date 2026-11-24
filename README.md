@@ -6,12 +6,15 @@
 
 ## ✨ Tính Năng Nổi Bật
 
-- **Kiến trúc Single-Binary & Tối ưu Bộ nhớ:** Nhúng toàn bộ giao diện Web tĩnh, cơ sở dữ liệu cấu hình nội bộ SQLite WAL (`/var/lib/spanel/spanel.db`) và bộ cấp phát bộ nhớ `mimalloc` trong 1 tệp thực thi duy nhất (~11–12 MB), không cần cài đặt Python/Node.js runtime trên máy chủ.
+- **Kiến trúc Single-Binary & Tối ưu Bộ nhớ:** Nhúng toàn bộ giao diện Web tĩnh, cơ sở dữ liệu cấu hình nội bộ SQLite WAL (`/var/lib/spanel/spanel.db`) và bộ cấp phát bộ nhớ `mimalloc` trong 1 tệp thực thi duy nhất (~14–15 MB), không cần cài đặt Python/Node.js runtime trên máy chủ.
 - **Giao diện Multi-Green Tương phản cao & Đa ngôn ngữ (`VI | EN`):** Hỗ trợ chuyển đổi tức thời giữa **Dark Mode / Light Mode** và **Tiếng Việt / Tiếng Anh (`VI | EN`)** cho cả giao diện Web lẫn dòng lệnh CLI (`sp`).
 - **Giám sát Hệ thống Thời gian thực (0 Subprocess):** Theo dõi trực tiếp CPU, RAM, Swap, Phân vùng ổ đĩa, Lưu lượng mạng, Disk I/O và bảng **Tiến trình tiêu thụ cao nhất (kèm thời gian hoạt động `Uptime`)** qua WebSocket mỗi 2 giây.
 - **Quản lý Website Nginx & Auto-SSL (ACMEv2):** Hỗ trợ Static HTML, PHP-FPM đa phiên bản, Reverse Proxy (WebSocket), URL Rewrite, Redirect 301/302, BasicAuth và tự động cấp phát/gia hạn chứng chỉ **Let's Encrypt** (tự động kiểm tra `nginx -t` và hoàn tác khi lỗi).
-- **Quản trị Cơ sở dữ liệu, Lập lịch Cron & Sao lưu Luồng 64 KB:** Quản lý **MariaDB/MySQL** và **PostgreSQL** qua Unix Domain Socket, sao lưu/khôi phục nén `.tar.zst` / `.sql.zst` theo luồng 64 KB, tự động xoay vòng log và dọn bản sao lưu cũ theo `retention_count`.
-- **Trình quản lý Tệp, Web Terminal (Local PTY) & Tường lửa UFW / SSH Security:** Duyệt/sửa code trực tiếp bằng CodeMirror 6, mở Local PTY Terminal (`xterm.js`), quản lý cổng UFW (có khóa chống tự khóa cổng quản trị) và gia cố `/etc/ssh/sshd_config` (kiểm tra `sshd -t` bắt buộc trước khi áp dụng).
+- **Quản trị Cơ sở dữ liệu, Lập lịch Cron & Cloud Backup S3/R2 Streaming:** Quản lý **MariaDB/MySQL** và **PostgreSQL** qua Unix Domain Socket; sao lưu/khôi phục `.tar.zst` / `.sql.zst` theo luồng 64 KB cục bộ hoặc truyền thẳng lên **Cloudflare R2, AWS S3, Backblaze B2, MinIO** không tạo tệp tạm trên VPS.
+- **Trình quản lý Tệp, Web Terminal Đa Tab (Local PTY + Remote SSH TOFU) & Tường lửa UFW / SSH Security:** Duyệt/sửa code trực tiếp bằng CodeMirror 6, mở Local PTY & Remote SSH thuần Rust (`russh` + TOFU SHA-256 chống MITM), quản lý cổng UFW (có khóa chống tự khóa cổng quản trị) và gia cố `/etc/ssh/sshd_config`.
+- **Tường lửa Web Nhẹ (`Lightweight Nginx WAF`):** Bảo vệ từng website chống SQL Injection, XSS/Path Traversal, Bad Bot/Scanner, lộ tệp nhạy cảm (`.env`, `.git`) và Rate/Conn Limit thuần Nginx Native kèm nút chặn IP UFW 1 chạm.
+- **Chống Giả Mạo Tệp & Cách Ly Webshell (`InotifyFileGuard`):** Giám sát thay đổi tệp thời gian thực bằng Linux Kernel `inotify` (`0` polling), quét chữ ký Webshell giới hạn bộ nhớ `64 KB`, tự cách ly tệp đáng ngờ (`chmod 0000`, hỗ trợ Khôi phục / Xóa 1 chạm và tạm dừng 15/30/60 phút khi deploy).
+- **Cảnh báo Bảo mật & Hạ tầng Tức thời (`Telegram` & `Webhook HMAC`):** Thông báo thời gian thực qua `EventBus` khi đăng nhập bất thường, quá tải tài nguyên, chứng chỉ SSL sắp hết hạn, bùng phát tấn công WAF hoặc phát hiện Webshell/thay đổi tệp.
 
 ---
 
@@ -93,9 +96,9 @@ curl -fsSL https://raw.githubusercontent.com/lucaslong24/spanel-rust/release/uni
 
 ---
 
-## 🔐 Mã Băm Kiểm Tra Toàn Vẹn (`SHA256SUMS` — `v1.0.0`)
+## 🔐 Mã Băm Kiểm Tra Toàn Vẹn (`SHA256SUMS`)
 
 ```text
-8616a532cd23e6a2801a97aa666eb102be491be91a50be461c4f9d5fa43ed4c1  spanel-linux-x86_64
-ac09edc59b6b76eca76e416c57fa82a565a21cb1310c5de4e269f14249a13fa4  spanel-linux-aarch64
+a80f0aa8966a72be18eac3a0a2df5fa4a366e9f9bf4c7ccd0e0797b02dd45fb8  spanel-linux-x86_64
+5202200f4f0096703840425b71350130227720900194c9c7b7745733c712d3ab  spanel-linux-aarch64
 ```
